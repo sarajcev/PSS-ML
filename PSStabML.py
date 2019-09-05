@@ -7,7 +7,7 @@
 # <br>
 # University of Split, FESB, Department of Power Engineering <br>R. Boskovica 32, HR-21000 Split, Croatia, EU.</p>
 
-# In[55]:
+# In[1]:
 
 
 import numpy as np
@@ -16,13 +16,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-# In[56]:
+# In[2]:
 
 
 from scipy import stats
 
 
-# In[57]:
+# In[3]:
 
 
 from sklearn import metrics
@@ -43,14 +43,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
 
 
-# In[58]:
+# In[4]:
 
 
 # Inline figures
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[59]:
+# In[5]:
 
 
 # Figure aesthetics
@@ -58,7 +58,7 @@ sns.set(context='notebook', style='white', font_scale=1.2)
 sns.set_style('ticks', {'xtick.direction':'in', 'ytick.direction':'in'})
 
 
-# In[60]:
+# In[6]:
 
 
 # ancilary function from: https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
@@ -90,21 +90,14 @@ def heatmap(values, xlabel, ylabel, xticklabels, yticklabels, cmap=None,
 
 # ### Transformer diagnostic data and health index values
 
-# In[61]:
+# In[7]:
 
 
 data = pd.read_csv('GridDictionary.csv')
 data.head()
 
 
-# In[62]:
-
-
-# Flip ones into zeros for the "Stability" column
-#data['Stability'] = 1 - data['Stability']
-
-
-# In[63]:
+# In[8]:
 
 
 # Percentage of "ones" in the "Stability" column
@@ -112,15 +105,6 @@ print('There is {:.1f}% of unstable cases in the dataset!'.format(data['Stabilit
 
 
 # ### Select a random subset of the original data
-
-# In[64]:
-
-
-# Select a random subset of the original dataset (without replacement)
-#SUBSET_SIZE = 2000
-#random_idx = np.random.choice(data.index, size=SUBSET_SIZE, replace=False)
-#data = data.iloc[random_idx]
-
 
 # ### Data preprocessing and splitting
 
@@ -367,7 +351,7 @@ ax.plot(thresholds, recalls[:-1], lw=2, label='Recall')
 plt.vlines(0.5, 0, 1, linestyles='--', label='Threshold = 0.5')
 ax.set_xlabel('Thresholds')
 ax.legend(loc='best')
-ax.set_ylim(ymin=0.8, ymax=1.02)
+ax.set_ylim(bottom=0.8, top=1.02)
 ax.grid()
 fig.tight_layout()
 plt.show()
@@ -603,13 +587,11 @@ print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.
 y_t.head(10)
 
 
-# <p style="background-color:honeydew;padding:10px;border:2px solid mediumseagreen"><b>Note:</b> Reported model accuracy depends on the random synthetic dataset used during the learning phase, which has been generated from the original dataset (used for testing) by means of the simple "data augmentation" technique. Possibility for overfitting and underfitting should be further examined, preferably with a larger dataset.</p>
-
-# In[59]:
+# In[10]:
 
 
 import sys, IPython, platform, sklearn, scipy
-print("Notebook createad on {:s} computer running {:s} and using:      \nPython {:s}\nIPython {:s}\nScikit-learn {:s}\nPandas {:s}\nNumpy {:s}\nScipy {:s}"      .format(platform.machine(), ' '.join(platform.linux_distribution()[:2]), sys.version[:5], 
+print("Notebook createad on {:s} computer running {:s} and using:      \nPython {:s}\nIPython {:s}\nScikit-learn {:s}\nPandas {:s}\nNumpy {:s}\nScipy {:s}"      .format(platform.machine(), ' '.join(platform.dist()[:2]), sys.version[:5], 
               IPython.__version__, sklearn.__version__, pd.__version__, np.__version__, scipy.__version__))
 
 
