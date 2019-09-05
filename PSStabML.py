@@ -7,7 +7,7 @@
 # <br>
 # University of Split, FESB, Department of Power Engineering <br>R. Boskovica 32, HR-21000 Split, Croatia, EU.</p>
 
-# In[ ]:
+# In[55]:
 
 
 import numpy as np
@@ -16,13 +16,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-# In[ ]:
+# In[56]:
 
 
 from scipy import stats
 
 
-# In[ ]:
+# In[57]:
 
 
 from sklearn import metrics
@@ -43,14 +43,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
 
 
-# In[ ]:
+# In[58]:
 
 
 # Inline figures
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[ ]:
+# In[59]:
 
 
 # Figure aesthetics
@@ -58,7 +58,7 @@ sns.set(context='notebook', style='white', font_scale=1.2)
 sns.set_style('ticks', {'xtick.direction':'in', 'ytick.direction':'in'})
 
 
-# In[ ]:
+# In[60]:
 
 
 # ancilary function from: https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
@@ -90,21 +90,21 @@ def heatmap(values, xlabel, ylabel, xticklabels, yticklabels, cmap=None,
 
 # ### Transformer diagnostic data and health index values
 
-# In[ ]:
+# In[61]:
 
 
 data = pd.read_csv('GridDictionary.csv')
 data.head()
 
 
-# In[ ]:
+# In[62]:
 
 
 # Flip ones into zeros for the "Stability" column
 #data['Stability'] = 1 - data['Stability']
 
 
-# In[ ]:
+# In[63]:
 
 
 # Percentage of "ones" in the "Stability" column
@@ -113,18 +113,18 @@ print('There is {:.1f}% of unstable cases in the dataset!'.format(data['Stabilit
 
 # ### Select a random subset of the original data
 
-# In[ ]:
+# In[64]:
 
 
 # Select a random subset of the original dataset (without replacement)
-SUBSET_SIZE = 2000
-random_idx = np.random.choice(data.index, size=SUBSET_SIZE, replace=False)
-data = data.iloc[random_idx]
+#SUBSET_SIZE = 2000
+#random_idx = np.random.choice(data.index, size=SUBSET_SIZE, replace=False)
+#data = data.iloc[random_idx]
 
 
 # ### Data preprocessing and splitting
 
-# In[ ]:
+# In[65]:
 
 
 # Training dataset
@@ -135,14 +135,14 @@ y_data = data['Stability']
 print('y_data', y_data.shape)
 
 
-# In[ ]:
+# In[66]:
 
 
 # Split dataset into train and test sets
 X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, train_size=0.8, shuffle=True)
 
 
-# In[ ]:
+# In[67]:
 
 
 print('X_train', X_train.shape)
@@ -151,7 +151,7 @@ print('X_test', X_test.shape)
 print('y_test', y_test.shape)
 
 
-# In[ ]:
+# In[68]:
 
 
 y_t = data[['Stability']].copy()
@@ -162,7 +162,7 @@ y_t.shape
 
 # #### StandardScaler
 
-# In[ ]:
+# In[69]:
 
 
 # Standardize the input data
@@ -173,7 +173,7 @@ X_test = scaler.transform(X_test)
 
 # ### LogisticRegression
 
-# In[ ]:
+# In[70]:
 
 
 # Logistic Regression (with fixed hyper-parameters)
@@ -183,7 +183,7 @@ lreg.fit(X_train, y_train)  # fit model to data
 y_lr = lreg.predict_proba(X_test)  # predict on new data
 
 
-# In[ ]:
+# In[71]:
 
 
 pred = lreg.predict(X_test)
@@ -197,7 +197,7 @@ plt.gca().invert_yaxis()
 plt.show()
 
 
-# In[ ]:
+# In[72]:
 
 
 # classification report
@@ -206,7 +206,7 @@ print(metrics.classification_report(y_test, pred, target_names=labels))
 
 # #### GridSearchCV
 
-# In[ ]:
+# In[73]:
 
 
 # Grid-search with cross validation for optimal model hyper-parameters
@@ -220,7 +220,7 @@ best_c = lreg.best_params_['C']
 print('Best value: C = {:g}'.format(best_c))
 
 
-# In[ ]:
+# In[74]:
 
 
 # Average classification accuracy with cross validation
@@ -231,7 +231,7 @@ print('Score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scor
 
 # ### Feature selection with Pipeline and GridSearch
 
-# In[ ]:
+# In[75]:
 
 
 # Optimize the number of features and the classifier's hyper-parameters 
@@ -248,7 +248,7 @@ print('Best parameter (CV score = {:0.3f}):'.format(grid_pipe.best_score_))
 print(grid_pipe.best_params_)
 
 
-# In[ ]:
+# In[76]:
 
 
 # Predict probability on test data
@@ -256,7 +256,7 @@ y_lr = grid_pipe.predict_proba(X_test)
 y_t['logreg'] = y_lr.argmax(axis=1)
 
 
-# In[ ]:
+# In[77]:
 
 
 y_t.head()
@@ -264,7 +264,7 @@ y_t.head()
 
 # ### Support Vector Machine
 
-# In[ ]:
+# In[78]:
 
 
 parameters ={'C':[1., 10., 100., 500., 1000.],
@@ -275,7 +275,7 @@ svc = GridSearchCV(estimator=svm.SVC(kernel='rbf', probability=True),
 svc.fit(X_train, y_train)
 
 
-# In[ ]:
+# In[79]:
 
 
 # Best model parameters
@@ -283,21 +283,21 @@ best_parameters = svc.best_params_
 print("Best parameters from GridSearch: {}".format(svc.best_params_))
 
 
-# In[ ]:
+# In[80]:
 
 
 scores = cross_val_score(svm.SVC(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[ ]:
+# In[27]:
 
 
 results = pd.DataFrame(svc.cv_results_)
 scores = np.array(results.mean_test_score).reshape(len(parameters['C']), len(parameters['gamma']))
 
 
-# In[ ]:
+# In[28]:
 
 
 fig, ax = plt.subplots(figsize=(5,5))
@@ -308,7 +308,7 @@ plt.show()
 
 # #### RandomizedSearchCV
 
-# In[ ]:
+# In[29]:
 
 
 parameters = {'C':stats.expon(scale=100), 'gamma':stats.expon(scale=.1)}
@@ -319,7 +319,7 @@ svc2 = RandomizedSearchCV(estimator=svm.SVC(kernel='rbf', probability=True),
 svc2.fit(X_train, y_train)
 
 
-# In[ ]:
+# In[30]:
 
 
 # Best model parameters
@@ -327,14 +327,14 @@ best_parameters = svc2.best_params_
 print("Best parameters from RandomSearch: {}".format(svc2.best_params_))
 
 
-# In[ ]:
+# In[31]:
 
 
 scores = cross_val_score(svm.SVC(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[ ]:
+# In[32]:
 
 
 y_svc2 = svc2.predict_proba(X_test)
@@ -343,7 +343,7 @@ y_t['svc'] = y_svc2.argmax(axis=1)
 
 # #### Precision-Recall Tradeoff
 
-# In[ ]:
+# In[33]:
 
 
 y_probas = cross_val_predict(svm.SVC(**best_parameters, probability=True), 
@@ -351,13 +351,13 @@ y_probas = cross_val_predict(svm.SVC(**best_parameters, probability=True),
 y_scores = y_probas[:,1]  # score = probability of positive class
 
 
-# In[ ]:
+# In[34]:
 
 
 precisions, recalls, thresholds = metrics.precision_recall_curve(y_train, y_scores)
 
 
-# In[ ]:
+# In[35]:
 
 
 fig, ax = plt.subplots(figsize=(6,4))
@@ -373,7 +373,7 @@ fig.tight_layout()
 plt.show()
 
 
-# In[ ]:
+# In[36]:
 
 
 fig, ax = plt.subplots(figsize=(4.5,4.5))
@@ -389,7 +389,7 @@ fig.tight_layout()
 plt.show()
 
 
-# In[ ]:
+# In[37]:
 
 
 # Average precision-recall score
@@ -398,7 +398,7 @@ average_precision = metrics.average_precision_score(y_test, y_test_score)
 print('Average precision-recall score: {0:0.2f}'.format(average_precision))
 
 
-# In[ ]:
+# In[38]:
 
 
 # Determine a class from the predicted probability by using 
@@ -407,7 +407,7 @@ THRESHOLD = 0.6
 preds = np.where(y_test_score > THRESHOLD, 1, 0)
 
 
-# In[ ]:
+# In[39]:
 
 
 pd.DataFrame(data=[metrics.accuracy_score(y_test, preds), metrics.recall_score(y_test, preds),
@@ -417,7 +417,7 @@ pd.DataFrame(data=[metrics.accuracy_score(y_test, preds), metrics.recall_score(y
 
 # ### ExtraTreesClassifier
 
-# In[ ]:
+# In[40]:
 
 
 # ExtraTreesClassifier (ensemble learner) with grid search 
@@ -430,7 +430,7 @@ trees = GridSearchCV(estimator=ExtraTreesClassifier(), param_grid=parameters,
 trees.fit(X_train, y_train)
 
 
-# In[ ]:
+# In[41]:
 
 
 # Best model parameters
@@ -438,14 +438,14 @@ best_parameters = trees.best_params_
 print("Best parameters: {}".format(trees.best_params_))
 
 
-# In[ ]:
+# In[42]:
 
 
 scores = cross_val_score(ExtraTreesClassifier(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[ ]:
+# In[43]:
 
 
 y_trees = trees.predict_proba(X_test)
@@ -454,7 +454,7 @@ y_t['tree'] = y_trees.argmax(axis=1)
 
 # ### RandomForest classifier (ensemble learner)
 
-# In[ ]:
+# In[44]:
 
 
 # RandomForestClassifier (ensemble learner for classification)
@@ -468,21 +468,21 @@ forest = GridSearchCV(estimator=RandomForestClassifier(), param_grid=parameters,
 forest.fit(X_train, y_train)
 
 
-# In[ ]:
+# In[45]:
 
 
 best_parameters = forest.best_params_
 print("Best parameters: {}".format(forest.best_params_))
 
 
-# In[ ]:
+# In[46]:
 
 
 scores = cross_val_score(RandomForestClassifier(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[ ]:
+# In[47]:
 
 
 y_forest = forest.predict_proba(X_test)
@@ -491,7 +491,7 @@ y_t['forest'] = y_forest.argmax(axis=1)
 
 # ### GradientBoosting classifier with feature importance analysis
 
-# In[ ]:
+# In[48]:
 
 
 # Train & evaluate model performance
@@ -502,7 +502,7 @@ def train_and_evaluate(model, X, y, ns=3):
     print('Average score using {:d}-fold CV: {:g} +/- {:g}'.format(ns, np.mean(scores), np.std(scores)))
 
 
-# In[ ]:
+# In[49]:
 
 
 # Gradient Boosting Classifier
@@ -511,7 +511,7 @@ train_and_evaluate(clf_gb, X_train, y_train, 3)
 clf_gb.fit(X_train, y_train)
 
 
-# In[ ]:
+# In[50]:
 
 
 # Feature importance
@@ -521,7 +521,7 @@ sorted_idx = np.argsort(feature_importance)
 pos = np.arange(sorted_idx.shape[0]) + .5
 
 
-# In[ ]:
+# In[51]:
 
 
 # Select top features
@@ -530,7 +530,7 @@ print('Most relevant {:d} features according to the GradientBoostingClassifier:'
 data.columns.values[sorted_idx][-TOP:][::-1]
 
 
-# In[ ]:
+# In[52]:
 
 
 # Plot relative feature importance
@@ -543,7 +543,7 @@ plt.tight_layout()
 plt.show()
 
 
-# In[ ]:
+# In[53]:
 
 
 # Correlation matrix of selected features
@@ -556,7 +556,7 @@ plt.tight_layout()
 plt.show()
 
 
-# In[ ]:
+# In[54]:
 
 
 # Predict on new data
@@ -570,7 +570,7 @@ y_t['gbr'] = y_gb.argmax(axis=1)
 
 # ### Soft voting
 
-# In[ ]:
+# In[55]:
 
 
 clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
@@ -581,14 +581,14 @@ clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
 clf = clf.fit(X_train, y_train)
 
 
-# In[ ]:
+# In[56]:
 
 
 y_clf = clf.predict_proba(X_test)
 y_t['vote'] = y_clf.argmax(axis=1)
 
 
-# In[ ]:
+# In[57]:
 
 
 scores = cross_val_score(clf, X_train, y_train, cv=3)
@@ -597,7 +597,7 @@ print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.
 
 # #### Predictions using individual classifiers and ensembles
 
-# In[ ]:
+# In[58]:
 
 
 y_t.head(10)
@@ -605,7 +605,7 @@ y_t.head(10)
 
 # <p style="background-color:honeydew;padding:10px;border:2px solid mediumseagreen"><b>Note:</b> Reported model accuracy depends on the random synthetic dataset used during the learning phase, which has been generated from the original dataset (used for testing) by means of the simple "data augmentation" technique. Possibility for overfitting and underfitting should be further examined, preferably with a larger dataset.</p>
 
-# In[ ]:
+# In[59]:
 
 
 import sys, IPython, platform, sklearn, scipy
