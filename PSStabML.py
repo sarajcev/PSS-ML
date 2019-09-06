@@ -106,9 +106,18 @@ print('There is {:.1f}% of unstable cases in the dataset!'.format(data['Stabilit
 
 # ### Select a random subset of the original data
 
+# In[9]:
+
+
+# Select a random subset of the original dataset (without replacement)
+#SUBSET_SIZE = 2000
+#random_idx = np.random.choice(data.index, size=SUBSET_SIZE, replace=False)
+#data = data.iloc[random_idx]
+
+
 # ### Data preprocessing and splitting
 
-# In[65]:
+# In[10]:
 
 
 # Training dataset
@@ -119,14 +128,14 @@ y_data = data['Stability']
 print('y_data', y_data.shape)
 
 
-# In[66]:
+# In[11]:
 
 
 # Split dataset into train and test sets
 X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, train_size=0.8, shuffle=True)
 
 
-# In[67]:
+# In[12]:
 
 
 print('X_train', X_train.shape)
@@ -135,7 +144,7 @@ print('X_test', X_test.shape)
 print('y_test', y_test.shape)
 
 
-# In[68]:
+# In[13]:
 
 
 y_t = data[['Stability']].copy()
@@ -146,7 +155,7 @@ y_t.shape
 
 # #### StandardScaler
 
-# In[69]:
+# In[14]:
 
 
 # Standardize the input data
@@ -157,7 +166,7 @@ X_test = scaler.transform(X_test)
 
 # ### LogisticRegression
 
-# In[70]:
+# In[15]:
 
 
 # Logistic Regression (with fixed hyper-parameters)
@@ -167,11 +176,11 @@ lreg.fit(X_train, y_train)  # fit model to data
 y_lr = lreg.predict_proba(X_test)  # predict on new data
 
 
-# In[71]:
+# In[175]:
 
 
 pred = lreg.predict(X_test)
-labels = ['Stab', 'NotStab']
+labels = ['Stable', 'Unstable']
 # confusion matrix
 scores_image = heatmap(metrics.confusion_matrix(y_test, pred), xlabel='Predicted label', 
                        ylabel='True label', xticklabels=labels, yticklabels=labels, 
@@ -181,7 +190,7 @@ plt.gca().invert_yaxis()
 plt.show()
 
 
-# In[72]:
+# In[17]:
 
 
 # classification report
@@ -190,7 +199,7 @@ print(metrics.classification_report(y_test, pred, target_names=labels))
 
 # #### GridSearchCV
 
-# In[73]:
+# In[18]:
 
 
 # Grid-search with cross validation for optimal model hyper-parameters
@@ -204,7 +213,7 @@ best_c = lreg.best_params_['C']
 print('Best value: C = {:g}'.format(best_c))
 
 
-# In[74]:
+# In[19]:
 
 
 # Average classification accuracy with cross validation
@@ -215,7 +224,7 @@ print('Score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scor
 
 # ### Feature selection with Pipeline and GridSearch
 
-# In[75]:
+# In[20]:
 
 
 # Optimize the number of features and the classifier's hyper-parameters 
@@ -223,8 +232,8 @@ print('Score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scor
 pca = PCA()  # do NOT set "n_components" here!
 logreg = LR(multi_class='ovr', solver='newton-cg')  # multinomial classification!
 pipe = Pipeline([('pca',pca), ('logreg',logreg)])
-param_grid = {'pca__n_components': [10, 50, 100],  # PCA
-              'logreg__C': [10., 100., 500.]}      # LogisticRegression
+param_grid = {'pca__n_components': [10, 20, 50, 100],   # PCA
+              'logreg__C': [10., 50., 100., 500.]}      # LogisticRegression
 grid_pipe = GridSearchCV(estimator=pipe, param_grid=param_grid, cv=3, 
                          scoring='f1', refit=True, n_jobs=-1, iid=False)
 grid_pipe.fit(X_train, y_train)
@@ -232,7 +241,7 @@ print('Best parameter (CV score = {:0.3f}):'.format(grid_pipe.best_score_))
 print(grid_pipe.best_params_)
 
 
-# In[76]:
+# In[21]:
 
 
 # Predict probability on test data
@@ -240,7 +249,7 @@ y_lr = grid_pipe.predict_proba(X_test)
 y_t['logreg'] = y_lr.argmax(axis=1)
 
 
-# In[77]:
+# In[22]:
 
 
 y_t.head()
@@ -248,7 +257,7 @@ y_t.head()
 
 # ### Support Vector Machine
 
-# In[78]:
+# In[23]:
 
 
 parameters ={'C':[1., 10., 100., 500., 1000.],
@@ -259,7 +268,7 @@ svc = GridSearchCV(estimator=svm.SVC(kernel='rbf', probability=True),
 svc.fit(X_train, y_train)
 
 
-# In[79]:
+# In[24]:
 
 
 # Best model parameters
@@ -267,21 +276,21 @@ best_parameters = svc.best_params_
 print("Best parameters from GridSearch: {}".format(svc.best_params_))
 
 
-# In[80]:
+# In[25]:
 
 
 scores = cross_val_score(svm.SVC(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[27]:
+# In[26]:
 
 
 results = pd.DataFrame(svc.cv_results_)
 scores = np.array(results.mean_test_score).reshape(len(parameters['C']), len(parameters['gamma']))
 
 
-# In[28]:
+# In[27]:
 
 
 fig, ax = plt.subplots(figsize=(5,5))
@@ -292,18 +301,18 @@ plt.show()
 
 # #### RandomizedSearchCV
 
-# In[29]:
+# In[28]:
 
 
 parameters = {'C':stats.expon(scale=100), 'gamma':stats.expon(scale=.1)}
 svc2 = RandomizedSearchCV(estimator=svm.SVC(kernel='rbf', probability=True), 
                           param_distributions=parameters, cv=3, n_iter=50,  # 50 iterations!
-                          scoring='neg_log_loss',  # notice the scoring method!
+                          scoring='f1',  # notice the scoring method!
                           refit=True, n_jobs=-1, iid=False)
 svc2.fit(X_train, y_train)
 
 
-# In[30]:
+# In[29]:
 
 
 # Best model parameters
@@ -311,14 +320,14 @@ best_parameters = svc2.best_params_
 print("Best parameters from RandomSearch: {}".format(svc2.best_params_))
 
 
-# In[31]:
+# In[30]:
 
 
 scores = cross_val_score(svm.SVC(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[32]:
+# In[31]:
 
 
 y_svc2 = svc2.predict_proba(X_test)
@@ -327,7 +336,7 @@ y_t['svc'] = y_svc2.argmax(axis=1)
 
 # #### Precision-Recall Tradeoff
 
-# In[33]:
+# In[32]:
 
 
 y_probas = cross_val_predict(svm.SVC(**best_parameters, probability=True), 
@@ -335,13 +344,13 @@ y_probas = cross_val_predict(svm.SVC(**best_parameters, probability=True),
 y_scores = y_probas[:,1]  # score = probability of positive class
 
 
-# In[34]:
+# In[33]:
 
 
 precisions, recalls, thresholds = metrics.precision_recall_curve(y_train, y_scores)
 
 
-# In[35]:
+# In[34]:
 
 
 fig, ax = plt.subplots(figsize=(6,4))
@@ -357,7 +366,7 @@ fig.tight_layout()
 plt.show()
 
 
-# In[36]:
+# In[35]:
 
 
 fig, ax = plt.subplots(figsize=(4.5,4.5))
@@ -373,7 +382,7 @@ fig.tight_layout()
 plt.show()
 
 
-# In[37]:
+# In[36]:
 
 
 # Average precision-recall score
@@ -382,7 +391,7 @@ average_precision = metrics.average_precision_score(y_test, y_test_score)
 print('Average precision-recall score: {0:0.2f}'.format(average_precision))
 
 
-# In[38]:
+# In[37]:
 
 
 # Determine a class from the predicted probability by using 
@@ -391,7 +400,7 @@ THRESHOLD = 0.6
 preds = np.where(y_test_score > THRESHOLD, 1, 0)
 
 
-# In[39]:
+# In[38]:
 
 
 pd.DataFrame(data=[metrics.accuracy_score(y_test, preds), metrics.recall_score(y_test, preds),
@@ -410,7 +419,7 @@ parameters = {'n_estimators':[5, 10, 15, 20],
               'criterion':['gini', 'entropy'], 
               'max_depth':[2, 5, None]}
 trees = GridSearchCV(estimator=ExtraTreesClassifier(), param_grid=parameters, 
-                     cv=3, scoring='neg_log_loss', refit=True, n_jobs=-1, iid=False) 
+                     cv=3, scoring='f1', refit=True, n_jobs=-1, iid=False) 
 trees.fit(X_train, y_train)
 
 
@@ -448,7 +457,7 @@ parameters = {'n_estimators':[10, 15, 20],
               'max_depth':[2, None]}
 # grid search and cross-validation for hyper-parameters optimisation
 forest = GridSearchCV(estimator=RandomForestClassifier(), param_grid=parameters, 
-                      cv=3, scoring='neg_log_loss', refit=True, n_jobs=-1, iid=False) 
+                      cv=3, scoring='f1', refit=True, n_jobs=-1, iid=False) 
 forest.fit(X_train, y_train)
 
 
@@ -505,13 +514,14 @@ sorted_idx = np.argsort(feature_importance)
 pos = np.arange(sorted_idx.shape[0]) + .5
 
 
-# In[51]:
+# In[55]:
 
 
 # Select top features
 TOP = 10
+top_features = data.columns.values[sorted_idx][-TOP:][::-1]
 print('Most relevant {:d} features according to the GradientBoostingClassifier:'.format(TOP))
-data.columns.values[sorted_idx][-TOP:][::-1]
+print(top_features)
 
 
 # In[52]:
@@ -548,13 +558,146 @@ y_gb = clf_gb.predict_proba(X_test)
 y_t['gbr'] = y_gb.argmax(axis=1)
 
 
+# ### Re-train SVM using only top features from the GradientBoosting classifier
+
+# In[157]:
+
+
+# IMPORTANT: NTOP <= TOP
+NTOP = 2  # using only top 2 features!
+
+
+# In[125]:
+
+
+top_features_index = []
+for name in top_features:
+    top_features_index.append(data.columns.get_loc(name))
+
+
+# In[158]:
+
+
+X_train_best = X_train[:,top_features_index[:NTOP]]
+X_test_best = X_test[:,top_features_index[:NTOP]]
+print(X_train_best.shape)
+print(X_test_best.shape)
+
+
+# In[159]:
+
+
+# Optimize SVM with only TOP features
+parameters = {'C':stats.expon(scale=100), 'gamma':stats.expon(scale=.1)}
+svc_top = RandomizedSearchCV(estimator=svm.SVC(kernel='rbf', probability=True), 
+                             param_distributions=parameters, cv=3, n_iter=50,  # 50 iterations!
+                             scoring='f1',  # notice the scoring method!
+                             refit=True, n_jobs=-1, iid=False)
+svc_top.fit(X_train_best, y_train)
+
+
+# In[160]:
+
+
+# Best model parameters
+best_parameters = svc_top.best_params_
+print("Best parameters from RandomSearch: {}".format(svc_top.best_params_))
+
+
+# In[161]:
+
+
+scores = cross_val_score(svm.SVC(**best_parameters), X_train_best, y_train, cv=3)
+print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
+
+
+# In[174]:
+
+
+# confusion matrix
+scores_image = heatmap(metrics.confusion_matrix(y_test, svc_top.predict(X_test_best)), 
+                       xlabel='Predicted label', ylabel='True label', 
+                       xticklabels=labels, yticklabels=labels, 
+                       cmap=plt.cm.gray_r, fmt="%d")
+plt.title("Confusion matrix")
+plt.gca().invert_yaxis()
+plt.show()
+
+
+# In[162]:
+
+
+print(metrics.classification_report(y_test, svc_top.predict(X_test_best), target_names=labels))
+
+
+# #### Graphical visualization of the top two features
+
+# In[163]:
+
+
+x_vals_0 = data[top_features[0]].loc[data['Stability']==0]
+x_vals_1 = data[top_features[0]].loc[data['Stability']==1]
+y_vals_0 = data[top_features[1]].loc[data['Stability']==0]
+y_vals_1 = data[top_features[1]].loc[data['Stability']==1]
+
+
+# In[164]:
+
+
+fig, ax = plt.subplots(figsize=(5.5,5.5))
+ax.scatter(x_vals_0, y_vals_0, s=30, c='green', marker='o', edgecolors='k', alpha=0.6, label='Stable')
+ax.scatter(x_vals_1, y_vals_1, s=30, c='red', marker='o', edgecolors='k', alpha=0.6, label='Unstable')
+ax.legend(loc='best')
+ax.set_xlabel(top_features[0])
+ax.set_ylabel(top_features[1])
+ax.grid()
+fig.tight_layout()
+plt.show()
+
+
+# #### Plot decision region with only top two features (NTOP = 2)
+
+# In[165]:
+
+
+# Axis grid with NTOP = 2
+x_min, x_max = X_train_best[:,0].min() - 0.1, X_train_best[:,0].max() + 0.1
+y_min, y_max = X_train_best[:,1].min() - 0.1, X_train_best[:,1].max() + 0.1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01),
+                     np.arange(y_min, y_max, 0.01))
+
+
+# In[166]:
+
+
+Z = svc_top.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:,1]
+Z = Z.reshape(xx.shape)
+
+
+# In[171]:
+
+
+fig, ax = plt.subplots(figsize=(6,5))
+ax.contourf(xx, yy, Z, cmap=plt.cm.RdBu, alpha=0.8)
+ax.scatter(x_vals_0, y_vals_0, s=30, c='green', marker='o', edgecolors='k', alpha=0.6, label='Stable')
+ax.scatter(x_vals_1, y_vals_1, s=30, c='red', marker='o', edgecolors='k', alpha=0.6, label='Unstable')
+ax.legend(loc='best')
+ax.set_xlabel(top_features[0])
+ax.set_ylabel(top_features[1])
+ax.set_xlim(-0.5, 0.4)
+ax.set_ylim(-0.9, 1.1)
+ax.grid()
+fig.tight_layout()
+plt.show()
+
+
 # ## Ensemble models using voting principle
 
 # <p style="background-color:honeydew;padding:10px;border:2px solid mediumseagreen"><b>Note:</b> Ensembling consists of pooling together the predictions of a set of different models, to produce better predictions. The key to making ensembling work is the diversity of the set of classifiers. Diversity is what makes ensembling work. For this reason, one should ensemble models that are as good as possible while being <b>as different as possible</b>. This typically means using very different network architectures or even different brands of machine-learning approaches. This is exactly what has been proposed here.</p>
 
 # ### Soft voting
 
-# In[55]:
+# In[54]:
 
 
 clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
@@ -565,14 +708,14 @@ clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
 clf = clf.fit(X_train, y_train)
 
 
-# In[56]:
+# In[55]:
 
 
 y_clf = clf.predict_proba(X_test)
 y_t['vote'] = y_clf.argmax(axis=1)
 
 
-# In[57]:
+# In[56]:
 
 
 scores = cross_val_score(clf, X_train, y_train, cv=3)
@@ -581,13 +724,13 @@ print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.
 
 # #### Predictions using individual classifiers and ensembles
 
-# In[58]:
+# In[57]:
 
 
 y_t.head(10)
 
 
-# In[10]:
+# In[176]:
 
 
 import sys, IPython, platform, sklearn, scipy
