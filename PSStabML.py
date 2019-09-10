@@ -36,7 +36,7 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import VotingClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.model_selection import KFold 
+from sklearn.model_selection import KFold, StratifiedKFold 
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import cross_val_predict
 from sklearn.model_selection import train_test_split
@@ -176,7 +176,7 @@ lreg.fit(X_train, y_train)  # fit model to data
 y_lr = lreg.predict_proba(X_test)  # predict on new data
 
 
-# In[175]:
+# In[16]:
 
 
 pred = lreg.predict(X_test)
@@ -207,6 +207,8 @@ parameters = {'C':[1., 10., 50., 100., 500., 1000.]}
 lreg = GridSearchCV(estimator=LR(multi_class='ovr', solver='newton-cg'), 
                     param_grid=parameters, cv=3, scoring='f1',  # notice the "scoring" method!
                     refit=True, n_jobs=-1, iid=False)
+# In this case GridSearchCV uses StratifiedKFold (with cv=3 folds) when
+# the estimator is a classifier and y is either binary or multiclass!
 lreg.fit(X_train, y_train)
 # Best value of hyper-parameter "C"
 best_c = lreg.best_params_['C']
@@ -341,7 +343,7 @@ y_t['svc'] = y_svc2.argmax(axis=1)
 
 y_probas = cross_val_predict(svm.SVC(**best_parameters, probability=True), 
                              X_train, y_train, cv=3, method='predict_proba')
-y_scores = y_probas[:,1]  # score = probability of positive class
+y_scores = y_probas[:,1]  # score == probability of positive class
 
 
 # In[33]:
@@ -410,7 +412,7 @@ pd.DataFrame(data=[metrics.accuracy_score(y_test, preds), metrics.recall_score(y
 
 # ### ExtraTreesClassifier
 
-# In[40]:
+# In[39]:
 
 
 # ExtraTreesClassifier (ensemble learner) with grid search 
@@ -423,7 +425,7 @@ trees = GridSearchCV(estimator=ExtraTreesClassifier(), param_grid=parameters,
 trees.fit(X_train, y_train)
 
 
-# In[41]:
+# In[40]:
 
 
 # Best model parameters
@@ -431,14 +433,14 @@ best_parameters = trees.best_params_
 print("Best parameters: {}".format(trees.best_params_))
 
 
-# In[42]:
+# In[41]:
 
 
 scores = cross_val_score(ExtraTreesClassifier(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[43]:
+# In[42]:
 
 
 y_trees = trees.predict_proba(X_test)
@@ -447,7 +449,7 @@ y_t['tree'] = y_trees.argmax(axis=1)
 
 # ### RandomForest classifier (ensemble learner)
 
-# In[44]:
+# In[43]:
 
 
 # RandomForestClassifier (ensemble learner for classification)
@@ -461,21 +463,21 @@ forest = GridSearchCV(estimator=RandomForestClassifier(), param_grid=parameters,
 forest.fit(X_train, y_train)
 
 
-# In[45]:
+# In[44]:
 
 
 best_parameters = forest.best_params_
 print("Best parameters: {}".format(forest.best_params_))
 
 
-# In[46]:
+# In[45]:
 
 
 scores = cross_val_score(RandomForestClassifier(**best_parameters), X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[47]:
+# In[46]:
 
 
 y_forest = forest.predict_proba(X_test)
@@ -484,18 +486,18 @@ y_t['forest'] = y_forest.argmax(axis=1)
 
 # ### GradientBoosting classifier with feature importance analysis
 
-# In[48]:
+# In[47]:
 
 
 # Train & evaluate model performance
 def train_and_evaluate(model, X, y, ns=3):
     # k-fold cross validation iterator 
-    cv = KFold(n_splits=ns, shuffle=True)
+    cv = StratifiedKFold(n_splits=ns, shuffle=True)
     scores = cross_val_score(model, X, y, cv=cv, scoring='f1')  # scoring method is f1!
     print('Average score using {:d}-fold CV: {:g} +/- {:g}'.format(ns, np.mean(scores), np.std(scores)))
 
 
-# In[49]:
+# In[48]:
 
 
 # Gradient Boosting Classifier
@@ -504,7 +506,7 @@ train_and_evaluate(clf_gb, X_train, y_train, 3)
 clf_gb.fit(X_train, y_train)
 
 
-# In[50]:
+# In[49]:
 
 
 # Feature importance
@@ -514,7 +516,7 @@ sorted_idx = np.argsort(feature_importance)
 pos = np.arange(sorted_idx.shape[0]) + .5
 
 
-# In[55]:
+# In[50]:
 
 
 # Select top features
@@ -524,7 +526,7 @@ print('Most relevant {:d} features according to the GradientBoostingClassifier:'
 print(top_features)
 
 
-# In[52]:
+# In[51]:
 
 
 # Plot relative feature importance
@@ -537,7 +539,7 @@ plt.tight_layout()
 plt.show()
 
 
-# In[53]:
+# In[52]:
 
 
 # Correlation matrix of selected features
@@ -550,7 +552,7 @@ plt.tight_layout()
 plt.show()
 
 
-# In[54]:
+# In[53]:
 
 
 # Predict on new data
@@ -560,14 +562,14 @@ y_t['gbr'] = y_gb.argmax(axis=1)
 
 # ### Re-train SVM using only top features from the GradientBoosting classifier
 
-# In[157]:
+# In[54]:
 
 
 # IMPORTANT: NTOP <= TOP
 NTOP = 2  # using only top 2 features!
 
 
-# In[125]:
+# In[55]:
 
 
 top_features_index = []
@@ -575,7 +577,7 @@ for name in top_features:
     top_features_index.append(data.columns.get_loc(name))
 
 
-# In[158]:
+# In[56]:
 
 
 X_train_best = X_train[:,top_features_index[:NTOP]]
@@ -584,7 +586,7 @@ print(X_train_best.shape)
 print(X_test_best.shape)
 
 
-# In[159]:
+# In[57]:
 
 
 # Optimize SVM with only TOP features
@@ -596,7 +598,7 @@ svc_top = RandomizedSearchCV(estimator=svm.SVC(kernel='rbf', probability=True),
 svc_top.fit(X_train_best, y_train)
 
 
-# In[160]:
+# In[58]:
 
 
 # Best model parameters
@@ -604,14 +606,14 @@ best_parameters = svc_top.best_params_
 print("Best parameters from RandomSearch: {}".format(svc_top.best_params_))
 
 
-# In[161]:
+# In[59]:
 
 
 scores = cross_val_score(svm.SVC(**best_parameters), X_train_best, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[174]:
+# In[60]:
 
 
 # confusion matrix
@@ -624,7 +626,7 @@ plt.gca().invert_yaxis()
 plt.show()
 
 
-# In[162]:
+# In[61]:
 
 
 print(metrics.classification_report(y_test, svc_top.predict(X_test_best), target_names=labels))
@@ -632,62 +634,92 @@ print(metrics.classification_report(y_test, svc_top.predict(X_test_best), target
 
 # #### Graphical visualization of the top two features
 
-# In[163]:
+# In[62]:
 
 
-x_vals_0 = data[top_features[0]].loc[data['Stability']==0]
-x_vals_1 = data[top_features[0]].loc[data['Stability']==1]
-y_vals_0 = data[top_features[1]].loc[data['Stability']==0]
-y_vals_1 = data[top_features[1]].loc[data['Stability']==1]
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 
-# In[164]:
+# In[63]:
 
 
+idx_stable = y_test==0
+
+
+# In[64]:
+
+
+# Ploting data without standard scaler transformer
 fig, ax = plt.subplots(figsize=(5.5,5.5))
-ax.scatter(x_vals_0, y_vals_0, s=30, c='green', marker='o', edgecolors='k', alpha=0.6, label='Stable')
-ax.scatter(x_vals_1, y_vals_1, s=30, c='red', marker='o', edgecolors='k', alpha=0.6, label='Unstable')
-ax.legend(loc='best')
+ax.scatter(X_test_best[idx_stable,0], X_test_best[idx_stable,1], 
+           s=30, c='green', marker='o', edgecolors='k', alpha=0.5, label='Stable')
+ax.scatter(X_test_best[~idx_stable,0], X_test_best[~idx_stable,1], 
+           s=30, c='red', marker='o', edgecolors='k', alpha=0.5, label='Unstable')
+ax.legend(loc='upper left')
 ax.set_xlabel(top_features[0])
 ax.set_ylabel(top_features[1])
+ax.set_xlim(-5,1)
+ax.set_ylim(-6,1)
 ax.grid()
-fig.tight_layout()
+# Inset figure with a zoomed-in region of interest
+axins = zoomed_inset_axes(ax, zoom=3, loc='lower left')
+axins.scatter(X_test_best[idx_stable,0], X_test_best[idx_stable,1], 
+              s=30, c='green', marker='o', edgecolors='k', alpha=0.25, label='Stable')
+axins.scatter(X_test_best[~idx_stable,0], X_test_best[~idx_stable,1], 
+              s=30, c='red', marker='o', edgecolors='k', alpha=0.25, label='Unstable')
+axins.set_xlim(-1,0.1)
+axins.set_ylim(-0.6,0.5)
+plt.xticks(visible=False)
+plt.yticks(visible=False)
+# draw a box of the region of the inset axes in the parent axes 
+# and connecting lines between the box and the inset axes area
+mark_inset(ax, axins, loc1=2, loc2=4, fc='none', ec='dimgrey')
 plt.show()
 
 
-# #### Plot decision region with only top two features (NTOP = 2)
+# #### Plot decision region for test samples with only top two features (NTOP = 2)
 
-# In[165]:
+# In[65]:
 
 
 # Axis grid with NTOP = 2
-x_min, x_max = X_train_best[:,0].min() - 0.1, X_train_best[:,0].max() + 0.1
-y_min, y_max = X_train_best[:,1].min() - 0.1, X_train_best[:,1].max() + 0.1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01),
-                     np.arange(y_min, y_max, 0.01))
-
-
-# In[166]:
-
-
+x_min, x_max = X_test_best[:,0].min() - 0.1, X_test_best[:,0].max() + 0.1
+y_min, y_max = X_test_best[:,1].min() - 0.1, X_test_best[:,1].max() + 0.1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
 Z = svc_top.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:,1]
 Z = Z.reshape(xx.shape)
 
 
-# In[171]:
+# In[66]:
 
 
 fig, ax = plt.subplots(figsize=(6,5))
-ax.contourf(xx, yy, Z, cmap=plt.cm.RdBu, alpha=0.8)
-ax.scatter(x_vals_0, y_vals_0, s=30, c='green', marker='o', edgecolors='k', alpha=0.6, label='Stable')
-ax.scatter(x_vals_1, y_vals_1, s=30, c='red', marker='o', edgecolors='k', alpha=0.6, label='Unstable')
-ax.legend(loc='best')
+ax.contourf(xx, yy, Z, cmap=plt.cm.RdYlBu, alpha=0.8)
+ax.scatter(X_test_best[idx_stable,0], X_test_best[idx_stable,1], 
+           s=30, c='green', marker='o', edgecolors='k', alpha=0.5, label='Stable')
+ax.scatter(X_test_best[~idx_stable,0], X_test_best[~idx_stable,1], 
+           s=30, c='red', marker='o', edgecolors='k', alpha=0.5, label='Unstable')
+ax.legend(loc='upper left')
 ax.set_xlabel(top_features[0])
 ax.set_ylabel(top_features[1])
-ax.set_xlim(-0.5, 0.4)
-ax.set_ylim(-0.9, 1.1)
+ax.set_xlim(-5,1)
+ax.set_ylim(-6,1)
 ax.grid()
-fig.tight_layout()
+# Inset figure with a zoomed-in region of interest
+axins = zoomed_inset_axes(ax, zoom=3, loc='lower left')
+axins.contourf(xx, yy, Z, cmap=plt.cm.RdYlBu, alpha=0.8)
+axins.scatter(X_test_best[idx_stable,0], X_test_best[idx_stable,1], 
+              s=30, c='green', marker='o', edgecolors='k', alpha=0.5, label='Stable')
+axins.scatter(X_test_best[~idx_stable,0], X_test_best[~idx_stable,1], 
+              s=30, c='red', marker='o', edgecolors='k', alpha=0.5, label='Unstable')
+axins.set_xlim(-1,0.1)
+axins.set_ylim(-0.6,0.5)
+plt.xticks(visible=False)
+plt.yticks(visible=False)
+# draw a box of the region of the inset axes in the parent axes 
+# and connecting lines between the box and the inset axes area
+mark_inset(ax, axins, loc1=2, loc2=4, fc='none', ec='dimgrey')
 plt.show()
 
 
@@ -697,7 +729,7 @@ plt.show()
 
 # ### Soft voting
 
-# In[54]:
+# In[67]:
 
 
 clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
@@ -708,34 +740,48 @@ clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
 clf = clf.fit(X_train, y_train)
 
 
-# In[55]:
+# In[68]:
 
 
 y_clf = clf.predict_proba(X_test)
 y_t['vote'] = y_clf.argmax(axis=1)
 
 
-# In[56]:
+# In[69]:
 
 
 scores = cross_val_score(clf, X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
+# In[70]:
+
+
+# confusion matrix
+scores_image = heatmap(metrics.confusion_matrix(y_test, clf.predict(X_test)), 
+                       xlabel='Predicted label', ylabel='True label', 
+                       xticklabels=labels, yticklabels=labels, 
+                       cmap=plt.cm.gray_r, fmt="%d")
+plt.title("Confusion matrix")
+plt.gca().invert_yaxis()
+plt.show()
+
+
 # #### Predictions using individual classifiers and ensembles
 
-# In[57]:
+# In[71]:
 
 
 y_t.head(10)
 
 
-# In[176]:
+# In[74]:
 
 
-import sys, IPython, platform, sklearn, scipy
-print("Notebook createad on {:s} computer running {:s} and using:      \nPython {:s}\nIPython {:s}\nScikit-learn {:s}\nPandas {:s}\nNumpy {:s}\nScipy {:s}"      .format(platform.machine(), ' '.join(platform.dist()[:2]), sys.version[:5], 
-              IPython.__version__, sklearn.__version__, pd.__version__, np.__version__, scipy.__version__))
+import sys, IPython, platform, sklearn, scipy, matplotlib
+print("Notebook createad on {:s} computer running {:s} and using:      \nPython {:s}\nIPython {:s}\nScikit-learn {:s}\nPandas {:s}\nNumpy {:s}\nScipy {:s}\nMatplotlib {:s}"      .format(platform.machine(), ' '.join(platform.dist()[:2]), sys.version[:5], 
+              IPython.__version__, sklearn.__version__, pd.__version__, np.__version__, 
+              scipy.__version__, matplotlib.__version__))
 
 
 # In[ ]:
