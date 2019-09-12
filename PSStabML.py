@@ -534,7 +534,7 @@ fig, ax = plt.subplots(figsize=(5,5))
 ax.barh(pos[-TOP:], feature_importance[sorted_idx][-TOP:], align='center', color='magenta', alpha=0.6)
 plt.yticks(pos[-TOP:], data.columns[sorted_idx][-TOP:])
 ax.set_xlabel('Feature Relative Importance')
-#ax.grid(which='major', axis='x')
+ax.grid(which='major', axis='x')
 plt.tight_layout()
 plt.show()
 
@@ -560,7 +560,7 @@ y_gb = clf_gb.predict_proba(X_test)
 y_t['gbr'] = y_gb.argmax(axis=1)
 
 
-# ### Re-train SVM using only top features from the GradientBoosting classifier
+# #### Re-train SVM using only top features from the GradientBoosting classifier
 
 # In[54]:
 
@@ -611,25 +611,6 @@ print("Best parameters from RandomSearch: {}".format(svc_top.best_params_))
 
 scores = cross_val_score(svm.SVC(**best_parameters), X_train_best, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
-
-
-# In[60]:
-
-
-# confusion matrix
-scores_image = heatmap(metrics.confusion_matrix(y_test, svc_top.predict(X_test_best)), 
-                       xlabel='Predicted label', ylabel='True label', 
-                       xticklabels=labels, yticklabels=labels, 
-                       cmap=plt.cm.gray_r, fmt="%d")
-plt.title("Confusion matrix")
-plt.gca().invert_yaxis()
-plt.show()
-
-
-# In[61]:
-
-
-print(metrics.classification_report(y_test, svc_top.predict(X_test_best), target_names=labels))
 
 
 # #### Graphical visualization of the top two features
@@ -684,9 +665,10 @@ plt.show()
 
 
 # Axis grid with NTOP = 2
-x_min, x_max = X_test_best[:,0].min() - 0.1, X_test_best[:,0].max() + 0.1
-y_min, y_max = X_test_best[:,1].min() - 0.1, X_test_best[:,1].max() + 0.1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
+h = 0.1; delta = 0.01
+x_min, x_max = X_test_best[:,0].min() - h, X_test_best[:,0].max() + h
+y_min, y_max = X_test_best[:,1].min() - h, X_test_best[:,1].max() + h
+xx, yy = np.meshgrid(np.arange(x_min, x_max, delta), np.arange(y_min, y_max, delta))
 Z = svc_top.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:,1]
 Z = Z.reshape(xx.shape)
 
@@ -703,8 +685,8 @@ ax.scatter(X_test_best[~idx_stable,0], X_test_best[~idx_stable,1],
 ax.legend(loc='upper left')
 ax.set_xlabel(top_features[0])
 ax.set_ylabel(top_features[1])
-ax.set_xlim(-5,1)
-ax.set_ylim(-6,1)
+ax.set_xlim(x_min, x_max)
+ax.set_ylim(y_min, y_max)
 ax.grid()
 # Inset figure with a zoomed-in region of interest
 axins = zoomed_inset_axes(ax, zoom=3, loc='lower left')
@@ -723,13 +705,95 @@ mark_inset(ax, axins, loc1=2, loc2=4, fc='none', ec='dimgrey')
 plt.show()
 
 
+# ### Principal components with best features
+
+# <p style="background-color:honeydew;padding:10px;border:2px solid mediumseagreen"><b>Note:</b> All of the TOP features selected previously from the GradientBoostingClassifier are reduced down to the two principal components with PCA(n_components=2). This essentially means that the TOP-dimensional space of original features is projected into the 2D space of principal components. Now, one can easily visualize test cases and novel decision boundary in this new 2D coordinate system of principal components.</p>
+
+# In[67]:
+
+
+# Projecting TOP features using two principal components
+pca = PCA(n_components=2)
+X2_train = pca.fit_transform(X_train[:,top_features_index])
+X2_test = pca.transform(X_test[:,top_features_index])
+
+
+# In[68]:
+
+
+fig, ax = plt.subplots(figsize=(6,5))
+ax.scatter(X2_test[idx_stable,0], X2_test[idx_stable,1], 
+           s=30, c='green', marker='o', edgecolors='k', alpha=0.5, label='Stable')
+ax.scatter(X2_test[~idx_stable,0], X2_test[~idx_stable,1], 
+           s=30, c='red', marker='o', edgecolors='k', alpha=0.5, label='Unstable')
+ax.legend(loc='upper left')
+ax.set_xlabel('First principal component')
+ax.set_ylabel('Second principal component')
+ax.grid()
+fig.tight_layout()
+plt.show()
+
+
+# #### Train SVM classifier using principal components
+
+# In[69]:
+
+
+# Optimize SVM with only TOP features
+parameters = {'C':stats.expon(scale=100), 'gamma':stats.expon(scale=.1)}
+svc_pca = RandomizedSearchCV(estimator=svm.SVC(kernel='rbf', probability=True), 
+                             param_distributions=parameters, cv=3, n_iter=50,  # 50 iterations!
+                             scoring='f1',  # notice the scoring method!
+                             refit=True, n_jobs=-1, iid=False)
+svc_pca.fit(X2_train, y_train)
+
+
+# In[78]:
+
+
+# Best model parameters
+best_parameters = svc_pca.best_params_
+scores = cross_val_score(svm.SVC(**best_parameters), X2_train, y_train, cv=3)
+print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
+
+
+# In[70]:
+
+
+h = 0.1; delta = 0.01
+x_min, x_max = X2_test[:,0].min() - h, X2_test[:,0].max() + h
+y_min, y_max = X2_test[:,1].min() - h, X2_test[:,1].max() + h
+xx, yy = np.meshgrid(np.arange(x_min, x_max, delta), np.arange(y_min, y_max, delta))
+Z = svc_pca.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:,1]
+Z = Z.reshape(xx.shape)
+
+
+# In[71]:
+
+
+fig, ax = plt.subplots(figsize=(6,5))
+ax.contourf(xx, yy, Z, cmap=plt.cm.RdYlBu, alpha=0.8)
+ax.scatter(X2_test[idx_stable,0], X2_test[idx_stable,1], 
+           s=30, c='green', marker='o', edgecolors='k', alpha=0.5, label='Stable')
+ax.scatter(X2_test[~idx_stable,0], X2_test[~idx_stable,1], 
+           s=30, c='red', marker='o', edgecolors='k', alpha=0.5, label='Unstable')
+ax.legend(loc='upper left')
+ax.set_xlabel('First principal component')
+ax.set_ylabel('Second principal component')
+ax.grid()
+ax.set_xlim(x_min, x_max)
+ax.set_ylim(y_min, y_max)
+fig.tight_layout()
+plt.show()
+
+
 # ## Ensemble models using voting principle
 
 # <p style="background-color:honeydew;padding:10px;border:2px solid mediumseagreen"><b>Note:</b> Ensembling consists of pooling together the predictions of a set of different models, to produce better predictions. The key to making ensembling work is the diversity of the set of classifiers. Diversity is what makes ensembling work. For this reason, one should ensemble models that are as good as possible while being <b>as different as possible</b>. This typically means using very different network architectures or even different brands of machine-learning approaches. This is exactly what has been proposed here.</p>
 
 # ### Soft voting
 
-# In[67]:
+# In[72]:
 
 
 clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
@@ -737,24 +801,24 @@ clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
                                    ('forest', forest)],  # RandomForest 
                        weights=[1, 1, 1],  # classifier relative weights
                        voting='soft')
-clf = clf.fit(X_train, y_train)
+clf = clf.fit(X_train, y_train)  # train with a full set of features
 
 
-# In[68]:
+# In[73]:
 
 
 y_clf = clf.predict_proba(X_test)
 y_t['vote'] = y_clf.argmax(axis=1)
 
 
-# In[69]:
+# In[74]:
 
 
 scores = cross_val_score(clf, X_train, y_train, cv=3)
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[70]:
+# In[75]:
 
 
 # confusion matrix
@@ -769,23 +833,16 @@ plt.show()
 
 # #### Predictions using individual classifiers and ensembles
 
-# In[71]:
+# In[76]:
 
 
 y_t.head(10)
 
 
-# In[74]:
+# In[77]:
 
 
-import sys, IPython, platform, sklearn, scipy, matplotlib
-print("Notebook createad on {:s} computer running {:s} and using:      \nPython {:s}\nIPython {:s}\nScikit-learn {:s}\nPandas {:s}\nNumpy {:s}\nScipy {:s}\nMatplotlib {:s}"      .format(platform.machine(), ' '.join(platform.dist()[:2]), sys.version[:5], 
-              IPython.__version__, sklearn.__version__, pd.__version__, np.__version__, 
+import sys, IPython, sklearn, scipy, matplotlib
+print("Notebook createad with:      \nPython {:s}\nIPython {:s}\nScikit-learn {:s}\nPandas {:s}\nNumpy {:s}\nScipy {:s}\nMatplotlib {:s}"      .format(sys.version[:5], IPython.__version__, sklearn.__version__, pd.__version__, np.__version__, 
               scipy.__version__, matplotlib.__version__))
-
-
-# In[ ]:
-
-
-
 
