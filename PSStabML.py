@@ -514,9 +514,46 @@ y_trees = trees.predict_proba(X_test)
 y_t['tree'] = y_trees.argmax(axis=1)
 
 
-# ### RandomForest classifier (ensemble learner)
+# #### Feature importance analysis
 
 # In[46]:
+
+
+trees = ExtraTreesClassifier(**best_parameters)
+trees.fit(X_train, y_train)
+trees_feature_importance = trees.feature_importances_
+trees_feature_importance = 100.0 * (trees_feature_importance / trees_feature_importance.max())
+sorted_idx_trees = np.argsort(trees_feature_importance)
+position = np.arange(sorted_idx_trees.shape[0]) + .5
+
+
+# In[47]:
+
+
+# Select top features
+TOPT = 10
+top_features_trees = data.columns.values[sorted_idx_trees][-TOPT:][::-1]
+print('Most relevant {:d} features according to the ExtraTreesClassifier:'.format(TOPT))
+print(top_features_trees)
+
+
+# In[48]:
+
+
+# Plot relative feature importance
+fig, ax = plt.subplots(figsize=(6,5))
+ax.barh(position[-TOPT:], trees_feature_importance[sorted_idx_trees][-TOPT:], 
+        align='center', color='navy', alpha=0.6)
+plt.yticks(position[-TOPT:], data.columns[sorted_idx_trees][-TOPT:])
+ax.set_xlabel('Feature Relative Importance')
+ax.grid(which='major', axis='x')
+plt.tight_layout()
+plt.show()
+
+
+# ### RandomForest classifier (ensemble learner)
+
+# In[49]:
 
 
 # RandomForestClassifier (ensemble learner for classification)
@@ -530,21 +567,21 @@ forest = GridSearchCV(estimator=RandomForestClassifier(), param_grid=parameters,
 forest.fit(X_train, y_train)
 
 
-# In[47]:
+# In[50]:
 
 
 best_parameters = forest.best_params_
 print("Best parameters: {}".format(forest.best_params_))
 
 
-# In[48]:
+# In[51]:
 
 
 scores = cross_val_score(RandomForestClassifier(**best_parameters), X_train, y_train, cv=3, scoring='f1')
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[49]:
+# In[52]:
 
 
 y_forest = forest.predict_proba(X_test)
@@ -553,7 +590,7 @@ y_t['forest'] = y_forest.argmax(axis=1)
 
 # ### GradientBoosting classifier with feature importance analysis
 
-# In[50]:
+# In[53]:
 
 
 # Train & evaluate model performance
@@ -564,7 +601,7 @@ def train_and_evaluate(model, X, y, ns=3):
     print('Average score using {:d}-fold CV: {:g} +/- {:g}'.format(ns, np.mean(scores), np.std(scores)))
 
 
-# In[51]:
+# In[54]:
 
 
 # Gradient Boosting Classifier
@@ -573,7 +610,7 @@ train_and_evaluate(clf_gb, X_train, y_train, 3)
 clf_gb.fit(X_train, y_train)
 
 
-# In[52]:
+# In[55]:
 
 
 # Feature importance
@@ -583,7 +620,7 @@ sorted_idx = np.argsort(feature_importance)
 pos = np.arange(sorted_idx.shape[0]) + .5
 
 
-# In[53]:
+# In[56]:
 
 
 # Select top features
@@ -593,7 +630,7 @@ print('Most relevant {:d} features according to the GradientBoostingClassifier:'
 print(top_features)
 
 
-# In[54]:
+# In[57]:
 
 
 # Plot relative feature importance
@@ -606,7 +643,7 @@ plt.tight_layout()
 plt.show()
 
 
-# In[55]:
+# In[58]:
 
 
 # Correlation matrix of selected features
@@ -619,7 +656,7 @@ plt.tight_layout()
 plt.show()
 
 
-# In[56]:
+# In[59]:
 
 
 # Predict on new data
@@ -629,14 +666,14 @@ y_t['gbr'] = y_gb.argmax(axis=1)
 
 # #### Re-train SVM using only top features from the GradientBoosting classifier
 
-# In[57]:
+# In[60]:
 
 
 # IMPORTANT: NTOP <= TOP
 NTOP = 2  # using only top 2 features!
 
 
-# In[58]:
+# In[61]:
 
 
 top_features_index = []
@@ -644,7 +681,7 @@ for name in top_features:
     top_features_index.append(data.columns.get_loc(name))
 
 
-# In[59]:
+# In[62]:
 
 
 X_train_best = X_train[:,top_features_index[:NTOP]]
@@ -653,7 +690,7 @@ print(X_train_best.shape)
 print(X_test_best.shape)
 
 
-# In[60]:
+# In[63]:
 
 
 # Optimize SVM with only TOP features
@@ -665,7 +702,7 @@ svc_top = RandomizedSearchCV(estimator=svm.SVC(kernel='rbf', probability=True),
 svc_top.fit(X_train_best, y_train)
 
 
-# In[61]:
+# In[64]:
 
 
 # Best model parameters
@@ -673,7 +710,7 @@ best_parameters = svc_top.best_params_
 print("Best parameters from RandomSearch: {}".format(svc_top.best_params_))
 
 
-# In[62]:
+# In[65]:
 
 
 scores = cross_val_score(svm.SVC(**best_parameters), X_train_best, y_train, cv=3, scoring='f1')
@@ -682,20 +719,20 @@ print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.
 
 # #### Graphical visualization of the top two features
 
-# In[63]:
+# In[66]:
 
 
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 
-# In[64]:
+# In[67]:
 
 
 idx_stable = y_test==0
 
 
-# In[65]:
+# In[68]:
 
 
 # Ploting data without standard scaler transformer
@@ -728,7 +765,7 @@ plt.show()
 
 # #### Plot decision region for test samples with only top two features (NTOP = 2)
 
-# In[66]:
+# In[69]:
 
 
 # Axis grid with NTOP = 2
@@ -740,7 +777,7 @@ Z = svc_top.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:,1]
 Z = Z.reshape(xx.shape)
 
 
-# In[67]:
+# In[70]:
 
 
 fig, ax = plt.subplots(figsize=(6,5))
@@ -772,20 +809,45 @@ mark_inset(ax, axins, loc1=2, loc2=4, fc='none', ec='dimgrey')
 plt.show()
 
 
-# ### Principal components with best features
+# ### Principal components with best features from different learners
 
-# In[68]:
+# #### Unifying best features from different classifiers
+
+# In[71]:
 
 
-# Projecting TOP features using only two principal components
+print('Most relevant {:d} features according to the ExtraTreesClassifier:'.format(TOPT))
+print(top_features_trees)
+print('Most relevant {:d} features according to the GradientBoostingClassifier:'.format(TOP))
+print(top_features)
+top_features_all = set(top_features_trees).union(set(top_features))
+print('Union of most relevant features:')
+print(top_features_all)
+features_duplex = set(top_features_trees).intersection(set(top_features))
+print('Features selected by both classifiers:')
+print(features_duplex)
+
+
+# In[72]:
+
+
+top_features_index = []
+for name in top_features_all:
+    top_features_index.append(data.columns.get_loc(name))
+
+
+# In[73]:
+
+
+# Projecting best features using only two principal components
 pca = PCA(n_components=2)
 X2_train = pca.fit_transform(X_train[:,top_features_index])
 X2_test = pca.transform(X_test[:,top_features_index])
 
 
-# <p style="background-color:honeydew;padding:10px;border:2px solid mediumseagreen"><b>Note:</b> All of the TOP features selected previously from the GradientBoostingClassifier are reduced down to the two principal components with PCA(n_components=2). This essentially means that the TOP-dimensional space of original features is projected into the 2D space of principal components. Now, one can easily visualize test cases and novel decision boundary in this new 2D coordinate system of principal components.</p>
+# <p style="background-color:honeydew;padding:10px;border:2px solid mediumseagreen"><b>Note:</b> The union of best (unique) features selected previously by the ExtraTrees and GradientBoosting classifiers are reduced down to the two principal components. This essentially means that the multi-dimensional space of original features is projected into the 2D space of principal components. Now, one can easily visualize test cases and novel decision boundary in this new 2D coordinate system of principal components.</p>
 
-# In[69]:
+# In[74]:
 
 
 fig, ax = plt.subplots(figsize=(6,5))
@@ -803,7 +865,7 @@ plt.show()
 
 # #### Train SVM classifier using principal components
 
-# In[70]:
+# In[75]:
 
 
 # Optimize SVM with only TOP features
@@ -815,7 +877,7 @@ svc_pca = RandomizedSearchCV(estimator=svm.SVC(kernel='rbf', probability=True),
 svc_pca.fit(X2_train, y_train)
 
 
-# In[71]:
+# In[76]:
 
 
 # Best model parameters
@@ -824,7 +886,7 @@ scores = cross_val_score(svm.SVC(**best_parameters), X2_train, y_train, cv=3, sc
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[72]:
+# In[77]:
 
 
 h = 0.1; delta = 0.01
@@ -835,7 +897,7 @@ Z = svc_pca.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:,1]
 Z = Z.reshape(xx.shape)
 
 
-# In[73]:
+# In[78]:
 
 
 fig, ax = plt.subplots(figsize=(6,5))
@@ -860,7 +922,7 @@ plt.show()
 
 # ### Soft voting
 
-# In[74]:
+# In[79]:
 
 
 clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
@@ -871,21 +933,21 @@ clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
 clf = clf.fit(X_train, y_train)  # train with a full set of features
 
 
-# In[75]:
+# In[80]:
 
 
 y_clf = clf.predict_proba(X_test)
 y_t['vote'] = y_clf.argmax(axis=1)
 
 
-# In[76]:
+# In[81]:
 
 
 scores = cross_val_score(clf, X_train, y_train, cv=3, scoring='accuracy', n_jobs=-1)  # scoring='accuracy'
 print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[77]:
+# In[82]:
 
 
 # confusion matrix
@@ -898,15 +960,46 @@ plt.gca().invert_yaxis()
 plt.show()
 
 
+# #### Voting by training classifiers with only best features
+
+# In[88]:
+
+
+X_train_best_features = X_train[:,top_features_index]
+X_train_best_features.shape
+
+
+# In[84]:
+
+
+lr_best = LR(**lreg.best_params_)
+vm_best = svm.SVC(**svc2.best_params_, probability=True)
+fr_best = RandomForestClassifier(**forest.best_params_)
+clf = VotingClassifier(estimators=[('logreg', lr_best),       # LogisticRegression
+                                   ('svm', vm_best),         # SVC
+                                   ('forest', fr_best)],  # RandomForest 
+                       weights=[1, 2, 1],  # classifier relative weights
+                       voting='soft', n_jobs=-1)
+clf = clf.fit(X_train_best_features, y_train)  # train with a full set of features
+
+
+# In[85]:
+
+
+scores = cross_val_score(clf, X_train_best_features, y_train, cv=3, 
+                         scoring='accuracy', n_jobs=-1)  # scoring='accuracy'
+print('Average score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
+
+
 # #### Predictions using individual classifiers and ensembles
 
-# In[78]:
+# In[86]:
 
 
-y_t.head(10)
+y_t.head()
 
 
-# In[79]:
+# In[87]:
 
 
 import sys, IPython, sklearn, scipy, matplotlib
