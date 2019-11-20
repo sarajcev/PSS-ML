@@ -1161,16 +1161,16 @@ print('Precision: {:.5f}'.format(precisions[np.where(thresholds >= 0.5)[0][0]]))
 print('Recall: {:.5f}'.format(recalls[np.where(thresholds >= 0.5)[0][0]]))
 
 
-# In[106]:
+# In[109]:
 
 
 # Determine a class from the predicted probability by using 
 # the user-specified threshold value (not a default of 0.5)
-THRESHOLD = 0.6  # fine-tuning
+THRESHOLD = 0.65  # fine-tuning
 preds = np.where(y_test_scores > THRESHOLD, 1, 0)
 
 
-# In[107]:
+# In[110]:
 
 
 pd.DataFrame(data=[metrics.accuracy_score(y_test, preds), metrics.recall_score(y_test, preds),
