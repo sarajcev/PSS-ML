@@ -168,6 +168,13 @@ print('Unstable cases in testing dataset {:.1f}%:'.format(np.sum(y_test)/float(l
 # In[14]:
 
 
+print('Unstable cases in training dataset: {:.1f}%:'.format(np.sum(y_train)/float(len(y_train))*100.))
+print('Unstable cases in testing dataset {:.1f}%:'.format(np.sum(y_test)/float(len(y_test))*100.))
+
+
+# In[15]:
+
+
 y_t = data[['Stability']].copy()
 idx = y_test.index.values
 y_t = y_t.loc[idx]
@@ -176,7 +183,7 @@ y_t.shape
 
 # #### StandardScaler
 
-# In[15]:
+# In[16]:
 
 
 # Standardize the input data
