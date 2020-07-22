@@ -30,7 +30,7 @@ from sklearn import preprocessing
 from sklearn import feature_selection
 from sklearn import svm
 from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.linear_model import LogisticRegression as LR
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -54,11 +54,23 @@ import keras
 # In[5]:
 
 
+import warnings
+
+
+# In[7]:
+
+
+warnings.filterwarnings(action='ignore', category=FutureWarning)
+
+
+# In[8]:
+
+
 # Inline figures
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 
-# In[6]:
+# In[9]:
 
 
 # Figure aesthetics
@@ -66,7 +78,7 @@ sns.set(context='notebook', style='white', font_scale=1.1)
 sns.set_style('ticks', {'xtick.direction':'in', 'ytick.direction':'in'})
 
 
-# In[7]:
+# In[10]:
 
 
 # ancilary function from: https://github.com/amueller/introduction_to_ml_with_python/blob/master/mglearn/tools.py
@@ -98,7 +110,7 @@ def heatmap(values, xlabel, ylabel, xticklabels, yticklabels, cmap=None,
 
 # ### Transformer diagnostic data and health index values
 
-# In[8]:
+# In[11]:
 
 
 data = pd.read_csv('GridDictionary.csv')
@@ -111,7 +123,7 @@ data.head()
 #print(data.columns.values)
 
 
-# In[9]:
+# In[12]:
 
 
 # Percentage of "ones" in the "Stability" column
@@ -131,7 +143,7 @@ print('There is {:.1f}% of unstable cases in the dataset!'.format(data['Stabilit
 
 # ### Data preprocessing and splitting
 
-# In[10]:
+# In[13]:
 
 
 # Training dataset
@@ -142,14 +154,14 @@ y_data = data['Stability']
 print('y_data', y_data.shape)
 
 
-# In[11]:
+# In[14]:
 
 
 # Split dataset into train and test sets
 X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, train_size=0.8, shuffle=True)
 
 
-# In[12]:
+# In[15]:
 
 
 print('X_train', X_train.shape)
@@ -158,21 +170,21 @@ print('X_test', X_test.shape)
 print('y_test', y_test.shape)
 
 
-# In[13]:
+# In[16]:
 
 
 print('Unstable cases in training dataset: {:.1f}%:'.format(np.sum(y_train)/float(len(y_train))*100.))
 print('Unstable cases in testing dataset {:.1f}%:'.format(np.sum(y_test)/float(len(y_test))*100.))
 
 
-# In[14]:
+# In[17]:
 
 
 print('Unstable cases in training dataset: {:.1f}%:'.format(np.sum(y_train)/float(len(y_train))*100.))
 print('Unstable cases in testing dataset {:.1f}%:'.format(np.sum(y_test)/float(len(y_test))*100.))
 
 
-# In[15]:
+# In[18]:
 
 
 y_t = data[['Stability']].copy()
@@ -183,7 +195,7 @@ y_t.shape
 
 # #### StandardScaler
 
-# In[16]:
+# In[19]:
 
 
 # Standardize the input data
@@ -194,7 +206,7 @@ X_test = scaler.transform(X_test)
 
 # ### LogisticRegression
 
-# In[17]:
+# In[20]:
 
 
 # Grid-search with cross validation for optimal model hyper-parameters
@@ -211,7 +223,7 @@ best_c = lreg.best_params_['C']
 print('Best value: C = {:g}'.format(best_c))
 
 
-# In[18]:
+# In[21]:
 
 
 # Average classification accuracy with cross validation
@@ -219,7 +231,7 @@ scores = cross_val_score(lreg, X_train, y_train, cv=3, scoring='f1')  # it does 
 print('Score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scores)))
 
 
-# In[19]:
+# In[22]:
 
 
 pred = lreg.predict(X_test)
@@ -233,14 +245,14 @@ plt.gca().invert_yaxis()
 plt.show()
 
 
-# In[20]:
+# In[23]:
 
 
 # classification report
 print(metrics.classification_report(y_test, pred, target_names=labels))
 
 
-# In[21]:
+# In[24]:
 
 
 pd.DataFrame(data=[metrics.accuracy_score(y_test, pred), metrics.recall_score(y_test, pred),
@@ -250,7 +262,7 @@ pd.DataFrame(data=[metrics.accuracy_score(y_test, pred), metrics.recall_score(y_
 
 # ### Principal components analysis
 
-# In[16]:
+# In[25]:
 
 
 # Let's first reduce all features in the dataset down to 3 principal components.
@@ -260,7 +272,7 @@ X3_test = pca.transform(X_test)
 idx_stable = y_test==0
 
 
-# In[17]:
+# In[26]:
 
 
 # Let's see what it looks like
@@ -307,7 +319,7 @@ plt.savefig('PCA-3D.png', dpi=600)
 plt.show()
 
 
-# In[24]:
+# In[27]:
 
 
 # Average LR accuracy with only three principal components as features
@@ -319,7 +331,7 @@ print('Score using 3-fold CV: {:g} +/- {:g}'.format(np.mean(scores), np.std(scor
 
 # ### Autoencoder
 
-# In[94]:
+# In[28]:
 
 
 # Reducing "no_features" to 2D space with autoencoder
@@ -351,7 +363,7 @@ history = autoencoder.fit(X_train, X_train, epochs=100, batch_size=256,
                           callbacks=[early_stopping], verbose=0)
 
 
-# In[95]:
+# In[29]:
 
 
 plt.plot(history.history['loss'], label='loss')
@@ -360,13 +372,13 @@ plt.legend()
 plt.show()
 
 
-# In[96]:
+# In[30]:
 
 
 encoded_data = encoder.predict(X_test)
 
 
-# In[98]:
+# In[31]:
 
 
 fig, ax = plt.subplots(figsize=(5,5))
@@ -383,16 +395,41 @@ plt.savefig('Autoencode2D.png', dpi=600)
 plt.show()
 
 
+# ### Dimensionality reduction using truncated SVD
+
+# In[32]:
+
+
+svd = TruncatedSVD(n_components=2)
+X_svd = svd.fit_transform(X_test)
+
+
+# In[33]:
+
+
+fig, ax = plt.subplots(figsize=(5,5))
+ax.scatter(X_svd[idx_stable,0], X_svd[idx_stable,1], 
+           s=30, c='green', marker='o', edgecolors='k', alpha=0.5, label='Stable')
+ax.scatter(X_svd[~idx_stable,0], X_svd[~idx_stable,1], 
+           s=30, c='red', marker='o', edgecolors='k', alpha=0.5, label='Unstable')
+ax.legend(loc='best')
+ax.set_xlabel('First component')
+ax.set_ylabel('Second component')
+ax.grid()
+fig.tight_layout()
+plt.show()
+
+
 # ### t-distributed Stochastic Neighbor Embedding
 
-# In[39]:
+# In[34]:
 
 
 tsne = TSNE(n_components=2)
 X_embedded = tsne.fit_transform(X_test)
 
 
-# In[40]:
+# In[35]:
 
 
 fig, ax = plt.subplots(figsize=(5,5))
@@ -1155,7 +1192,7 @@ clf = VotingClassifier(estimators=[('logreg', lreg),     # LogisticRegression
                                    ('forest', forest)],  # RandomForest 
                        weights=[1, 2, 1],  # classifier relative weights
                        voting='soft', n_jobs=-1)
-clf.fit(X_train, y_train)  # train with a full set of features
+clf.fit(X_train, y_train);  # train with a full set of features
 
 
 # In[97]:
@@ -1214,7 +1251,7 @@ X_train_best_features.shape
 # In[103]:
 
 
-lreg.fit(X_train_best_features, y_train)
+lreg.fit(X_train_best_features, y_train);
 
 
 # In[104]:
@@ -1237,7 +1274,7 @@ pd.DataFrame(data=[metrics.accuracy_score(y_test, pred), metrics.recall_score(y_
 # In[107]:
 
 
-svc2.fit(X_train_best_features, y_train)
+svc2.fit(X_train_best_features, y_train);
 
 
 # In[108]:
@@ -1260,7 +1297,7 @@ pd.DataFrame(data=[metrics.accuracy_score(y_test, pred), metrics.recall_score(y_
 # In[110]:
 
 
-forest.fit(X_train_best_features, y_train)
+forest.fit(X_train_best_features, y_train);
 
 
 # In[111]:
@@ -1288,7 +1325,7 @@ clf2 = VotingClassifier(estimators=[('logreg', lreg),   # LogisticRegression
                                     ('forest', forest)],  # RandomForest 
                         weights=[1, 2, 1],  # classifier relative weights
                         voting='soft', n_jobs=-1)
-clf2.fit(X_train_best_features, y_train)  # train with selected features
+clf2.fit(X_train_best_features, y_train);  # train with selected features
 
 
 # In[114]:
@@ -1380,7 +1417,7 @@ clf3 = VotingClassifier(estimators=[('logreg', lreg),   # LogisticRegression
                                     ('forest', forest)],  # RandomForest 
                         weights=[1, 2, 3],  # classifier relative weights
                         voting='soft', n_jobs=-1)
-clf3.fit(X_train_best_features, y_train)  # train with selected features
+clf3.fit(X_train_best_features, y_train);  # train with selected features
 
 
 # In[149]:
